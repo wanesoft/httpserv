@@ -45,7 +45,8 @@
 #include <queue>
 #include <sstream>
 #include <atomic>
+#include <map>
 
-#define VOL_OF_THREAD		5
+#define VOL_OF_THREADS		5
 
 #endif /* __MAIN_HPP__ */

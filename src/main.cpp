@@ -12,12 +12,12 @@
 
 #include "main.hpp"
 
-std::mutex              g_print_mutex;
-std::mutex              g_queue_mutex;
-std::queue<std::string> g_que;
-std::mutex              m;
-std::condition_variable cond_var;
-std::atomic<bool>       notified{false};
+std::mutex                                          g_print_mutex;
+std::mutex                                          g_queue_mutex;
+std::queue<std::pair<std::string, std::string>>     g_que;
+std::mutex                                          m;
+std::condition_variable                             cond_var;
+std::atomic<bool>                                   notified{false};
 
 std::atomic<int> g_i{0};
 
@@ -85,7 +85,7 @@ void thread_worker(void) {
             std::string gaga(std::to_string(g_que.size()).data());
             gaga += " size of queue after pop()";
             put_log(gaga.data());
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
         } else {
             notified = false;
             lock.unlock();
@@ -95,13 +95,21 @@ void thread_worker(void) {
     }
 }
 
-void parser(const char *buff) {
+std::pair<std::string, std::string> parser(char *buff) {
 
-    if (strstr(buff, "\nUser-Agent: ")) {
-        put_log("nahel");
-    } else {
-        put_log("net");
+    std::string tmp(buff);
+    std::string ret1, ret2;
+    auto pos1 = tmp.find("GET /");
+    if (pos1 == std::string::npos) {
+        return (std::make_pair(ret1, ret2));
     }
+    auto pos2 = tmp.find("HTTP");
+    if (pos2 == std::string::npos) {
+        return (std::make_pair(ret1, ret2));
+    }
+    ret1 = tmp.substr(pos1 + 4, pos2 - 4);
+    put_log(std::string("|" + ret1 + "|").data());
+    return (std::make_pair(ret1, ret2));
 }
 
 int main() {
@@ -111,9 +119,9 @@ int main() {
     std::cout << "Done " << gen_sock << '\n';
     char buff[1024];
 
-    for (int i = 0; i < VOL_OF_THREAD; ++i) {
-        vec_threads.push_back(std::thread(thread_worker));
-    }
+    // for (int i = 0; i < VOL_OF_THREADS; ++i) {
+    //     vec_threads.push_back(std::thread(thread_worker));
+    // }
 
     int i = 0;
     char str_ok[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 16\r\nConnection: close\r\n\r\n<h1>Hello</h1>\r\n";
@@ -129,19 +137,20 @@ int main() {
             close(cur_sock);
             continue;
         }
-        parser(buff);
+        std::pair<std::string, std::string> tmp = parser(buff);
         int send_res = send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         put_log( (std::to_string(recv_res) + " " + std::to_string(send_res) + " " + std::to_string(i)).data() );
         close(cur_sock);
-        std::unique_lock<std::mutex> lock(m);
-        {
-            std::unique_lock<std::mutex> qlock(g_queue_mutex);
-            g_que.push(std::string(buff));
-            put_log( (std::to_string(g_que.size()) + " " + std::to_string(i)).data() );
-            notified = true;
-            cond_var.notify_one();
-            ++i;
-        }
+        // std::unique_lock<std::mutex> lock(m);
+        // {
+        //     std::unique_lock<std::mutex> qlock(g_queue_mutex);
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        //     // g_que.push(std::string(buff));
+        //     put_log( (std::to_string(g_que.size()) + " " + std::to_string(i)).data() );
+        //     notified = true;
+        //     cond_var.notify_one();
+        //     ++i;
+        // }
     }
 
     return (1);
