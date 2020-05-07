@@ -42,11 +42,7 @@
 #include <functional>
 #include <vector>
 #include <condition_variable>
-#include <mutex>
-#include <thread>
-#include <iostream>
 #include <queue>
-#include <chrono>
 #include <sstream>
 #include <atomic>
 
