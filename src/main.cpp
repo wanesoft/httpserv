@@ -91,7 +91,16 @@ void thread_worker(void) {
             lock.unlock();
             g_queue_mutex.unlock();
         }
-        for (int i = 20000000; i; --i) {}
+        // for (int i = 20000000; i; --i) {}
+    }
+}
+
+void parser(const char *buff) {
+
+    if (strstr(buff, "\nUser-Agent: ")) {
+        put_log("nahel");
+    } else {
+        put_log("net");
     }
 }
 
@@ -107,13 +116,21 @@ int main() {
     }
 
     int i = 0;
+    char str_ok[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 16\r\nConnection: close\r\n\r\n<h1>Hello</h1>\r\n";
 
     while (1) {
 
         int cur_sock = accept(gen_sock, 0, 0);
         memset(buff, 0, 1024);
+        put_log( (std::to_string(cur_sock) + " cur sock").data() );
         int recv_res = recv(cur_sock, buff, 1024, MSG_NOSIGNAL);
-        int send_res = send(cur_sock, "HTTP/1.1 200 OK", strlen("HTTP/1.1 200 OK"), MSG_NOSIGNAL);
+        if (strncmp(buff, "GET", 3) != 0) {
+            send(cur_sock, "HTTP/1.1 400 Bad Request", strlen("HTTP/1.1 400 Bad Request"), MSG_NOSIGNAL);
+            close(cur_sock);
+            continue;
+        }
+        parser(buff);
+        int send_res = send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         put_log( (std::to_string(recv_res) + " " + std::to_string(send_res) + " " + std::to_string(i)).data() );
         close(cur_sock);
         std::unique_lock<std::mutex> lock(m);
