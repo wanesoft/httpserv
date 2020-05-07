@@ -85,7 +85,7 @@ void thread_worker(void) {
             std::string gaga(std::to_string(g_que.size()).data());
             gaga += " size of queue after pop()";
             put_log(gaga.data());
-            // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } else {
             notified = false;
             lock.unlock();
