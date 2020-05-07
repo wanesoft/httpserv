@@ -13,10 +13,13 @@
 #include "main.hpp"
 
 std::mutex              g_print_mutex;
+std::mutex              g_queue_mutex;
 std::queue<std::string> g_que;
 std::mutex              m;
 std::condition_variable cond_var;
 bool                    notified = false;
+
+std::atomic<int> g_i{0};
 
 void put_log(const char *str) {
 
@@ -60,17 +63,25 @@ void thread_worker(void) {
     put_log(tmp.str().data());
     while (1) {
         std::unique_lock<std::mutex> lock(m);
-        std::cout << "Check 1\n";
-        std::cout << "Check 2\n";
+        // std::cout << "Check 1\n";
+        // std::cout << "Check 2\n";
         while (!notified) {  // loop to avoid spurious wakeups
-            std::cout << "Check 3\n";
+            // std::cout << "Check 3\n";
             cond_var.wait(lock);
         }
-        while (!g_que.empty()) {
-            std::cout << "I: " << myid;
-            std::cout << "consuming " << g_que.front() << '\n';
+        std::string tmp2;
+        tmp2 += "I: ";
+        // tmp2 += std::to_string(myid);
+        // tmp2 += " ";
+        tmp2 += std::to_string(g_i);
+        ++g_i;
+        // while (!g_que.empty()) {
+        //     std::cout << "I: " << myid;
+        //     std::cout << " consuming " << g_que.front() << '\n';
+        std::lock_guard<std::mutex> qlock(g_queue_mutex);
             g_que.pop();
-        }
+        put_log(tmp2.data());
+        // }
         notified = false;
     }
 }
@@ -93,12 +104,14 @@ int main() {
         int recv_res = recv(cur_sock, buff, 1024, MSG_NOSIGNAL);
         int send_res = send(cur_sock, "HTTP/1.1 200 OK", strlen("HTTP/1.1 200 OK"), MSG_NOSIGNAL);
         std::unique_lock<std::mutex> lock(m);
-        g_que.push(std::string(buff));
+
         notified = true;
         cond_var.notify_one();
         // std::cout << "i recv: " << recv_res << '\n';
         // std::cout << "i send: " << send_res << '\n';
         close(cur_sock);
+        std::lock_guard<std::mutex> qlock(g_queue_mutex);
+        g_que.push(std::string(buff));
         // std::cout << buff;
     }
 

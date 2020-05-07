@@ -48,6 +48,7 @@
 #include <queue>
 #include <chrono>
 #include <sstream>
+#include <atomic>
 
 #define VOL_OF_THREAD		5
 
