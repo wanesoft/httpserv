@@ -41,6 +41,14 @@
 #include <mutex>
 #include <functional>
 #include <vector>
-#include <deque>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <iostream>
+#include <queue>
+#include <chrono>
+#include <sstream>
+
+#define VOL_OF_THREAD		5
 
 #endif /* __MAIN_HPP__ */
