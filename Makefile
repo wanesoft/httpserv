@@ -14,7 +14,7 @@ OBJDIR		=	obj
 SRCDIR		=	src
 OBJ			=	$(addprefix $(OBJDIR)/, $(patsubst $(SRCDIR)/%.cpp, %.o, $(wildcard $(SRCDIR)/*.cpp)))
 HDR			=	$(SRCDIR)/*.hpp
-TARGET		=	serverd
+TARGET		=	httpserv
 GCC			=	g++
 CPPFLAGS	=	-std=c++11 -lpthread -lssl -lcrypto -Wall -Wextra
 
