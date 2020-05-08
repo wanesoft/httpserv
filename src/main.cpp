@@ -19,8 +19,6 @@ std::mutex                                          g_m;
 std::condition_variable                             g_cond_var;
 std::atomic<bool>                                   g_notified{false};
 
-std::atomic<int> g_i{0};
-
 void put_log(const char *str) {
 
     std::lock_guard<std::mutex> lock(g_print_mutex);
@@ -127,7 +125,6 @@ void thread_worker(void) {
             uni_lock.unlock();
             g_queue_mutex.unlock();
         }
-        // for (int i = 10000000; i; --i) {}
     }
 }
 
@@ -162,22 +159,19 @@ int main() {
 
     int gen_sock = connection_for_incoming();
     std::vector<std::thread> vec_threads;
-    std::cout << "Done " << gen_sock << '\n';
+    std::cout << "Server started" << '\n';
     char buff[1024];
 
     for (int i = 0; i < VOL_OF_THREADS; ++i) {
         vec_threads.push_back(std::thread(thread_worker));
     }
 
-    int i = 0;
     char str_ok[] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 16\r\nConnection: close\r\n\r\n<h1>Hello</h1>\r\n";
 
     while (1) {
 
         int cur_sock = accept(gen_sock, 0, 0);
         memset(buff, 0, 1024);
-        // put_log( (std::to_string(cur_sock) + " cur sock").data() );
-        // int recv_res = recv(cur_sock, buff, 1024, MSG_NOSIGNAL);
         recv(cur_sock, buff, 1024, MSG_NOSIGNAL);
         std::pair<std::string, std::string> tmp = parser(buff);
         if (std::get<0>(tmp).empty() || std::get<1>(tmp).empty()) {
@@ -185,18 +179,14 @@ int main() {
             close(cur_sock);
             continue;
         }
-        // int send_res = send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
-        // put_log( (std::to_string(recv_res) + " " + std::to_string(send_res) + " " + std::to_string(i)).data() );
         close(cur_sock);
         std::unique_lock<std::mutex> lock(g_m);
         {
             std::unique_lock<std::mutex> qlock(g_queue_mutex);
             g_que.push(tmp);
-            // put_log( (std::to_string(g_que.size()) + " " + std::to_string(i)).data() );
             g_notified = true;
             g_cond_var.notify_one();
-            ++i;
         }
     }
 

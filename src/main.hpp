@@ -23,14 +23,9 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include <sys/sysinfo.h>
 #include <time.h>
 #include <locale.h>
 #include <pwd.h>
-#include <signal.h>
-#include <sys/inotify.h>
-#include <poll.h>
-#include <dirent.h>
 #include <openssl/sha.h>
 
 #include <string>
