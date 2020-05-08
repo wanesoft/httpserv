@@ -1,4 +1,13 @@
 
+/*
+
+    Test task for AdGuard
+    "Small http-server"
+    Marochkin Ivan <wanesoft@mail.ru>
+    08/05/2020
+
+*/
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -71,10 +80,10 @@ int main(int ac, char **av) {
 
 	char str[] = "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: curl/TEST.69.0\r\nAccept: */*\r\n\r\n";
 
-	for (int j = 0; j < 100; ++j) {
+	for (int j = 0; j < 500; ++j) {
 		pid_t ch = fork();
 		if (!ch) {
-			for (int i = 0; i < 100; ++i) {
+			for (int i = 0; i < 1000; ++i) {
 				int sent_sock = connection_to_server(av[1]);
 				char buff[1024] = {0};
 				int se = send(sent_sock, str, strlen(str), MSG_NOSIGNAL);

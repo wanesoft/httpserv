@@ -1,0 +1,63 @@
+
+/*
+
+    Test task for AdGuard
+    "Small http-server"
+    Marochkin Ivan <wanesoft@mail.ru>
+    08/05/2020
+
+*/
+
+#ifndef __HTTPSERV_HPP__
+#define __HTTPSERV_HPP__
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <openssl/sha.h>
+
+#include <string>
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+#include <atomic>
+#include <map>
+
+#define VOL_OF_THREADS		5
+#define HTTPSERV_BUFSIZE	1024
+
+typedef std::queue<std::pair<std::string, std::string>> gen_queue;
+
+class Httpserv {
+
+private:
+	std::mutex					_print_mutex;
+	std::mutex					_queue_mutex;
+	gen_queue					_que;
+	std::mutex					_m;
+	std::condition_variable		_cond_var;
+	std::atomic<bool>			_notified{false};
+	int							_general_socket;
+	int							_number_of_threads;
+
+	int _create_connection(int port);
+	void _put_log(const char *str);
+	void _thread_worker(void);
+	std::pair<std::string, std::string> _parser(char *buff);
+
+public:
+	Httpserv(int threads, int port);
+	~Httpserv(void);
+	Httpserv(const Httpserv &other) = delete;
+	Httpserv(const Httpserv &&other) noexcept = delete;
+	Httpserv &operator=(const Httpserv &other) = delete;
+	Httpserv &operator=(Httpserv &&other) noexcept = delete;
+	int main_cycle();
+};
+
+#endif /* __HTTPSERV_HPP__ */
