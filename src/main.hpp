@@ -31,6 +31,7 @@
 #include <sys/inotify.h>
 #include <poll.h>
 #include <dirent.h>
+#include <openssl/sha.h>
 
 #include <string>
 #include <fstream>

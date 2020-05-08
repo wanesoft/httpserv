@@ -16,7 +16,7 @@ OBJ			=	$(addprefix $(OBJDIR)/, $(patsubst $(SRCDIR)/%.cpp, %.o, $(wildcard $(SR
 HDR			=	$(SRCDIR)/*.hpp
 TARGET		=	serverd
 GCC			=	g++
-CPPFLAGS	=	-std=c++11 -lpthread -Wall -Wextra
+CPPFLAGS	=	-std=c++11 -lpthread -lssl -lcrypto -Wall -Wextra
 
 .PHONY: all clean
 

@@ -69,22 +69,24 @@ int main(int ac, char **av) {
 		return (0);
 	}
 
-	char str[] = "GET /11111111111111111 HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: curl/7.69.0\r\nAccept: */*\r\n\r\n";
+	char str[] = "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: curl/TEST.69.0\r\nAccept: */*\r\n\r\n";
 
-	for (int j = 0; j < 1; ++j) {
+	for (int j = 0; j < 100; ++j) {
 		pid_t ch = fork();
 		if (!ch) {
-			for (int i = 0; i < 1; ++i) {
+			for (int i = 0; i < 100; ++i) {
 				int sent_sock = connection_to_server(av[1]);
 				char buff[1024] = {0};
 				int se = send(sent_sock, str, strlen(str), MSG_NOSIGNAL);
 				int re = recv(sent_sock, buff, 1024, MSG_NOSIGNAL);
-				std::cout << "send: " << se << ", recv: " << re << ", " << buff << '\n';
+				// std::cout << "send: " << se << ", recv: " << re << ", " << buff << '\n';
 				close(sent_sock);
 			}
 			exit(EXIT_SUCCESS);
 		}
 	}
+    wait(0);
+    std::cout << "done\n";
 
 	return (0);
 }
