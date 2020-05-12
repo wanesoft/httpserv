@@ -83,7 +83,7 @@ int main(int ac, char **av) {
 	for (int j = 0; j < 500; ++j) {
 		pid_t ch = fork();
 		if (!ch) {
-			for (int i = 0; i < 1000; ++i) {
+			for (int i = 0; i < 100; ++i) {
 				int sent_sock = connection_to_server(av[1]);
 				char buff[1024] = {0};
 				int se = send(sent_sock, str, strlen(str), MSG_NOSIGNAL);
