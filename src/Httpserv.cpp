@@ -110,8 +110,6 @@ void Httpserv::_thread_worker(void) {
             /* If general queue empty - just wait again */
         } else {
             _notified = false;
-            // guard_uni_lock.unlock();
-            // main_uni_lock.unlock();
         }
     }
 }
@@ -180,9 +178,7 @@ int Httpserv::main_cycle() {
     /* Start main cycle */
     while (Httpserv::_run) {
         memset(buff, 0, HTTPSERV_BUFSIZE);
-        _put_log("nachal");
         int cur_sock = accept(_general_socket, 0, 0);
-        _put_log("zakonchil");
         recv(cur_sock, buff, HTTPSERV_BUFSIZE, MSG_NOSIGNAL);
         /* If some one string is empty - send Bad request message */
         std::pair<std::string, std::string> tmp = _parser(buff);
@@ -195,7 +191,7 @@ int Httpserv::main_cycle() {
         send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         close(cur_sock);
         /* Lock queue-mutex, push new data to general queue and call to threads for work */
-        // std::unique_lock<std::mutex> qlock(_queue_mutex);
+        std::unique_lock<std::mutex> qlock(_queue_mutex);
         _que.push(tmp);
         _notified = true;
         _cond_var.notify_one();
@@ -226,11 +222,10 @@ void Httpserv::stop(int signo) {
         addr.sin_family = AF_INET;
         addr.sin_port = htons(cur->_port);
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        cur->_put_log("ya tut");
+        int flags = fcntl(general_socket, F_GETFL, 0);
+        fcntl(general_socket, F_SETFL, flags | O_NONBLOCK);
         res = connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
-        cur->_put_log("vyshel");
         if (res < 0) {
-            cur->_put_log("break accept() in main_cycle failed");
             connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
         }
         close(general_socket);
