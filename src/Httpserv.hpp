@@ -32,7 +32,6 @@
 
 #define VOL_OF_THREADS		5
 #define HTTPSERV_BUFSIZE	1024
-#define MAX_SERVERS			4
 
 typedef std::queue<std::pair<std::string, std::string>> gen_queue;
 
@@ -50,15 +49,16 @@ private:
 	int							_number_of_threads;
 	int							_port;
 
+	volatile static bool			_run;
+	static std::vector<Httpserv *>	_vec_servers;
+
 	int _create_connection(int port);
 	void _put_log(const char *str);
 	void _thread_worker(void);
 	std::pair<std::string, std::string> _parser(char *buff);
 
 public:
-	static bool run;
-	static int server_counter;
-	static std::vector<Httpserv *> vec_servers;
+
 	Httpserv(int threads, int port);
 	~Httpserv(void);
 	Httpserv(const Httpserv &other) = delete;
@@ -67,7 +67,7 @@ public:
 	Httpserv &operator=(Httpserv &&other) noexcept = delete;
 	int main_cycle();
 	static void stop(int signo);
-	static void stop2(int signo);
+
 };
 
 #endif /* __HTTPSERV_HPP__ */

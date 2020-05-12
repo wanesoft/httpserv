@@ -10,8 +10,9 @@
 
 #include "Httpserv.hpp"
 
-bool Httpserv::run = true;
-std::vector<Httpserv *> Httpserv::vec_servers;
+/* Static vars preparing */
+volatile bool Httpserv::_run = true;                         // general working flag
+std::vector<Httpserv *> Httpserv::_vec_servers;     // vec of pointers for signal handle
 
 void Httpserv::_put_log(const char *str) {
 
@@ -63,15 +64,15 @@ void Httpserv::_thread_worker(void) {
     int path_count;                                     // current path-hitcount
     int agent_count;                                    // current agent-hitcount
 
-    while (Httpserv::run) {
+    while (Httpserv::_run) {
 
         /* Enable waiting of condition var */
         std::unique_lock<std::mutex> uni_lock(_m);
-        while (Httpserv::run && !_notified) {
+        while (Httpserv::_run && !_notified) {
             _cond_var.wait(uni_lock);
         }
         /* Next lock mutex for general queue */
-        _queue_mutex.lock();
+        std::lock_guard<std::mutex> guard_lock(_queue_mutex);
         if (!_que.empty()) {
             /* Get values from queue and unlock mutexes */
             std::string path(std::get<0>(_que.front()).data());
@@ -79,7 +80,8 @@ void Httpserv::_thread_worker(void) {
             _que.pop();
             _notified = true;
             _cond_var.notify_one();
-            _queue_mutex.unlock();
+            guard_lock.~lock_guard();
+            // _queue_mutex.unlock();
             uni_lock.unlock();
             /* Get current counters from maps */
             path_count = path_map[path];
@@ -98,9 +100,6 @@ void Httpserv::_thread_worker(void) {
             /* Lock print-mutex and print to STDOUT like this view:
             <thread id> <path> <path-sha1> <path-hitcount> <user-agent>
             <user-agent-sha1> <user-agent-hitcount> */
-
-            // std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
             std::lock_guard<std::mutex> lock(_print_mutex);
             std::cout   << '<' << std::this_thread::get_id() << "> "    \
                         << '<' << path << "> "                          \
@@ -112,7 +111,7 @@ void Httpserv::_thread_worker(void) {
             /* If general queue empty - just wait again */
         } else {
             _notified = false;
-            uni_lock.unlock();
+            // uni_lock.unlock();
             _queue_mutex.unlock();
         }
     }
@@ -147,20 +146,20 @@ std::pair<std::string, std::string> Httpserv::_parser(char *buff) {
 
 Httpserv::Httpserv(int threads, int port) {
 
-    // Httpserv::server_counter++;
-    Httpserv::vec_servers.push_back(this);
+    /* Save 'this' pointer for signal handler */
+    Httpserv::_vec_servers.push_back(this);
+    /* Set signal handler */
     signal(SIGINT, Httpserv::stop);
+    /* Other preparing, incl start TCP connection */
 	_number_of_threads = threads;
-	// Httpserv::arr_of_gen_sockets[Httpserv::server_counter] = _create_connection(port);
-    // _general_socket = Httpserv::arr_of_gen_sockets[Httpserv::server_counter];
     _port = port;
     _general_socket = _create_connection(port);
 }
 
 Httpserv::~Httpserv(void) {
 
+    /* Waiting threads */
     for (auto &cur : _vec_threads) {
-        _put_log("stooooooooooop");
         cur.join();
     }
 }
@@ -168,7 +167,7 @@ Httpserv::~Httpserv(void) {
 int Httpserv::main_cycle() {
 
     /* Preparing */
-    std::cout << "Server started" << '\n';
+    std::cout << "Server started on port " << _port << '\n';
     char buff[HTTPSERV_BUFSIZE];
     /* Start threads */
     for (int i = 0; i < _number_of_threads; ++i) {
@@ -180,11 +179,9 @@ int Httpserv::main_cycle() {
 					Content-Length: 16\r\nConnection: close\r\n\r\n\
 					<h1>Hello</h1>\r\n";
     /* Start main cycle */
-    while (Httpserv::run) {
+    while (Httpserv::_run) {
         memset(buff, 0, HTTPSERV_BUFSIZE);
-        _put_log("nachal");
         int cur_sock = accept(_general_socket, 0, 0);
-        _put_log("zakoncjil");
         recv(cur_sock, buff, HTTPSERV_BUFSIZE, MSG_NOSIGNAL);
         /* If some one string is empty - send Bad request message */
         std::pair<std::string, std::string> tmp = _parser(buff);
@@ -207,14 +204,18 @@ int Httpserv::main_cycle() {
 
 void Httpserv::stop(int signo) {
 
-    Httpserv::run = false;
-
-    for (auto cur : Httpserv::vec_servers) {
-
+    /* Turnoff general running flag */
+    Httpserv::_run = false;
+    signo = signo;
+    for (auto cur : Httpserv::_vec_servers) {
+        /* Little save-check */
         if (!cur) {
             break;
         }
-
+        /* Put msg to log */
+        std::string msg = "Server stoping on port " + std::to_string(cur->_port);
+        cur->_put_log(msg.data());
+        /* Make own connect for break main_cycle on accept() */
         struct sockaddr_in addr;
         int res;
         int general_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -229,12 +230,14 @@ void Httpserv::stop(int signo) {
             cur->_put_log("break accept() in main_cycle failed");
         }
         close(general_socket);
-
+        /* Set stop for all threads */
         for (int i = 0; i < cur->_number_of_threads; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             cur->_notified = true;
             cur->_cond_var.notify_one();
         }
-
-        cur->_put_log("Server stoped");
+        /* Put msg to log */
+        msg = "Server stoped on port " + std::to_string(cur->_port);
+        cur->_put_log(msg.data());
     } 
 }
