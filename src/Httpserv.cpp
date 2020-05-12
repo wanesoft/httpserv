@@ -191,7 +191,7 @@ int Httpserv::main_cycle() {
         send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         close(cur_sock);
         /* Lock queue-mutex, push new data to general queue and call to threads for work */
-        std::unique_lock<std::mutex> qlock(_queue_mutex);
+        std::lock_guard<std::mutex> qlock(_queue_mutex);
         _que.push(tmp);
         _notified = true;
         _cond_var.notify_one();
