@@ -10,6 +10,9 @@
 
 #include "Httpserv.hpp"
 
+bool Httpserv::run = true;
+std::vector<Httpserv *> Httpserv::vec_servers;
+
 void Httpserv::_put_log(const char *str) {
 
     /* Logging function */
@@ -60,11 +63,11 @@ void Httpserv::_thread_worker(void) {
     int path_count;                                     // current path-hitcount
     int agent_count;                                    // current agent-hitcount
 
-    while (true) {
+    while (Httpserv::run) {
 
         /* Enable waiting of condition var */
         std::unique_lock<std::mutex> uni_lock(_m);
-        while (!_notified) {
+        while (Httpserv::run && !_notified) {
             _cond_var.wait(uni_lock);
         }
         /* Next lock mutex for general queue */
@@ -95,6 +98,9 @@ void Httpserv::_thread_worker(void) {
             /* Lock print-mutex and print to STDOUT like this view:
             <thread id> <path> <path-sha1> <path-hitcount> <user-agent>
             <user-agent-sha1> <user-agent-hitcount> */
+
+            // std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
             std::lock_guard<std::mutex> lock(_print_mutex);
             std::cout   << '<' << std::this_thread::get_id() << "> "    \
                         << '<' << path << "> "                          \
@@ -141,23 +147,32 @@ std::pair<std::string, std::string> Httpserv::_parser(char *buff) {
 
 Httpserv::Httpserv(int threads, int port) {
 
+    // Httpserv::server_counter++;
+    Httpserv::vec_servers.push_back(this);
+    signal(SIGINT, Httpserv::stop);
 	_number_of_threads = threads;
-	_general_socket = _create_connection(port);
+	// Httpserv::arr_of_gen_sockets[Httpserv::server_counter] = _create_connection(port);
+    // _general_socket = Httpserv::arr_of_gen_sockets[Httpserv::server_counter];
+    _port = port;
+    _general_socket = _create_connection(port);
 }
 
 Httpserv::~Httpserv(void) {
 
+    for (auto &cur : _vec_threads) {
+        _put_log("stooooooooooop");
+        cur.join();
+    }
 }
 
 int Httpserv::main_cycle() {
 
     /* Preparing */
-    std::vector<std::thread> vec_threads;
     std::cout << "Server started" << '\n';
     char buff[HTTPSERV_BUFSIZE];
     /* Start threads */
     for (int i = 0; i < _number_of_threads; ++i) {
-        vec_threads.push_back(std::thread(&Httpserv::_thread_worker, this));
+        _vec_threads.push_back(std::thread(&Httpserv::_thread_worker, this));
     }
     /* Just good-answer-string */
     char str_ok[] = "HTTP/1.1 200 OK\r\n\
@@ -165,9 +180,11 @@ int Httpserv::main_cycle() {
 					Content-Length: 16\r\nConnection: close\r\n\r\n\
 					<h1>Hello</h1>\r\n";
     /* Start main cycle */
-    while (true) {
+    while (Httpserv::run) {
         memset(buff, 0, HTTPSERV_BUFSIZE);
+        _put_log("nachal");
         int cur_sock = accept(_general_socket, 0, 0);
+        _put_log("zakoncjil");
         recv(cur_sock, buff, HTTPSERV_BUFSIZE, MSG_NOSIGNAL);
         /* If some one string is empty - send Bad request message */
         std::pair<std::string, std::string> tmp = _parser(buff);
@@ -186,4 +203,38 @@ int Httpserv::main_cycle() {
         _cond_var.notify_one();
     }
     return (0);
+}
+
+void Httpserv::stop(int signo) {
+
+    Httpserv::run = false;
+
+    for (auto cur : Httpserv::vec_servers) {
+
+        if (!cur) {
+            break;
+        }
+
+        struct sockaddr_in addr;
+        int res;
+        int general_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (general_socket < 0) {
+            perror("socket() not gave listener");
+        }
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(cur->_port);
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        res = connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
+        if (res < 0) {
+            cur->_put_log("break accept() in main_cycle failed");
+        }
+        close(general_socket);
+
+        for (int i = 0; i < cur->_number_of_threads; ++i) {
+            cur->_notified = true;
+            cur->_cond_var.notify_one();
+        }
+
+        cur->_put_log("Server stoped");
+    } 
 }

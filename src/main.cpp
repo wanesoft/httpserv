@@ -18,12 +18,17 @@ int main() {
         second - port number
     */
 
-    Httpserv serv(5, 80);
+    Httpserv serv_1(5, 80);
+    Httpserv serv_2(5, 443);
     std::cout << "Starting server\n";
-    std::thread t([&]() {
-        serv.main_cycle();
+    std::thread t_80([&]() {
+        serv_1.main_cycle();
     });
-    t.join();
+    std::thread t_443([&]() {
+        serv_2.main_cycle();
+    });
+    t_80.join();
+    t_443.join();
 
     return (0);
 }

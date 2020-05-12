@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <openssl/sha.h>
+#include <signal.h>
+#include <fcntl.h>
 
 #include <string>
 #include <iostream>
@@ -30,6 +32,7 @@
 
 #define VOL_OF_THREADS		5
 #define HTTPSERV_BUFSIZE	1024
+#define MAX_SERVERS			4
 
 typedef std::queue<std::pair<std::string, std::string>> gen_queue;
 
@@ -42,8 +45,10 @@ private:
 	std::mutex					_m;
 	std::condition_variable		_cond_var;
 	std::atomic<bool>			_notified{false};
+	std::vector<std::thread>	_vec_threads;
 	int							_general_socket;
 	int							_number_of_threads;
+	int							_port;
 
 	int _create_connection(int port);
 	void _put_log(const char *str);
@@ -51,6 +56,9 @@ private:
 	std::pair<std::string, std::string> _parser(char *buff);
 
 public:
+	static bool run;
+	static int server_counter;
+	static std::vector<Httpserv *> vec_servers;
 	Httpserv(int threads, int port);
 	~Httpserv(void);
 	Httpserv(const Httpserv &other) = delete;
@@ -58,6 +66,8 @@ public:
 	Httpserv &operator=(const Httpserv &other) = delete;
 	Httpserv &operator=(Httpserv &&other) noexcept = delete;
 	int main_cycle();
+	static void stop(int signo);
+	static void stop2(int signo);
 };
 
 #endif /* __HTTPSERV_HPP__ */
