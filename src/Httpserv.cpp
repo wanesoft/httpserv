@@ -11,7 +11,7 @@
 #include "Httpserv.hpp"
 
 /* Static vars preparing */
-volatile bool Httpserv::_run = true;                         // general working flag
+bool Httpserv::_run = true;                         // general working flag
 std::vector<Httpserv *> Httpserv::_vec_servers;     // vec of pointers for signal handle
 
 void Httpserv::_put_log(const char *str) {
@@ -72,7 +72,7 @@ void Httpserv::_thread_worker(void) {
             _cond_var.wait(main_uni_lock);
         }
         /* Next lock mutex for general queue */
-        std::unique_lock<std::mutex> guard_uni_lock(_queue_mutex);
+        // std::unique_lock<std::mutex> guard_uni_lock(_queue_mutex);
         if (!_que.empty()) {
             /* Get values from queue and unlock mutexes */
             std::string path(std::get<0>(_que.front()).data());
@@ -80,7 +80,7 @@ void Httpserv::_thread_worker(void) {
             _que.pop();
             _notified = true;
             _cond_var.notify_one();
-            guard_uni_lock.unlock();
+            // guard_uni_lock.unlock();
             main_uni_lock.unlock();
             /* Get current counters from maps */
             path_count = path_map[path];
@@ -110,6 +110,8 @@ void Httpserv::_thread_worker(void) {
             /* If general queue empty - just wait again */
         } else {
             _notified = false;
+            // guard_uni_lock.unlock();
+            // main_uni_lock.unlock();
         }
     }
 }
@@ -191,7 +193,7 @@ int Httpserv::main_cycle() {
         send(cur_sock, str_ok, strlen(str_ok), MSG_NOSIGNAL);
         close(cur_sock);
         /* Lock queue-mutex, push new data to general queue and call to threads for work */
-        std::unique_lock<std::mutex> qlock(_queue_mutex);
+        // std::unique_lock<std::mutex> qlock(_queue_mutex);
         _que.push(tmp);
         _notified = true;
         _cond_var.notify_one();
@@ -225,6 +227,7 @@ void Httpserv::stop(int signo) {
         res = connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
         if (res < 0) {
             cur->_put_log("break accept() in main_cycle failed");
+            connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
         }
         close(general_socket);
         /* Set stop for all threads */
