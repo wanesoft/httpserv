@@ -110,7 +110,6 @@ void Httpserv::_thread_worker(void) {
             /* If general queue empty - just wait again */
         } else {
             _notified = false;
-            _queue_mutex.unlock();
         }
     }
 }
