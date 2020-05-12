@@ -11,7 +11,7 @@
 #include "Httpserv.hpp"
 
 /* Static vars preparing */
-bool Httpserv::_run = true;                         // general working flag
+volatile bool Httpserv::_run = true;                // general working flag
 std::vector<Httpserv *> Httpserv::_vec_servers;     // vec of pointers for signal handle
 
 void Httpserv::_put_log(const char *str) {
@@ -180,7 +180,9 @@ int Httpserv::main_cycle() {
     /* Start main cycle */
     while (Httpserv::_run) {
         memset(buff, 0, HTTPSERV_BUFSIZE);
+        _put_log("nachal");
         int cur_sock = accept(_general_socket, 0, 0);
+        _put_log("zakonchil");
         recv(cur_sock, buff, HTTPSERV_BUFSIZE, MSG_NOSIGNAL);
         /* If some one string is empty - send Bad request message */
         std::pair<std::string, std::string> tmp = _parser(buff);
@@ -224,7 +226,9 @@ void Httpserv::stop(int signo) {
         addr.sin_family = AF_INET;
         addr.sin_port = htons(cur->_port);
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        cur->_put_log("ya tut");
         res = connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));
+        cur->_put_log("vyshel");
         if (res < 0) {
             cur->_put_log("break accept() in main_cycle failed");
             connect(general_socket, (struct sockaddr *)&addr, sizeof(addr));

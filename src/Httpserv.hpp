@@ -49,7 +49,7 @@ private:
 	int							_number_of_threads;
 	int							_port;
 
-	static bool			_run;
+	volatile static bool			_run;
 	static std::vector<Httpserv *>	_vec_servers;
 
 	int _create_connection(int port);
