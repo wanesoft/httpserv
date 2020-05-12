@@ -72,7 +72,7 @@ void Httpserv::_thread_worker(void) {
             _cond_var.wait(main_uni_lock);
         }
         /* Next lock mutex for general queue */
-        // std::unique_lock<std::mutex> guard_uni_lock(_queue_mutex);
+        std::unique_lock<std::mutex> guard_uni_lock(_queue_mutex);
         if (!_que.empty()) {
             /* Get values from queue and unlock mutexes */
             std::string path(std::get<0>(_que.front()).data());
@@ -80,7 +80,7 @@ void Httpserv::_thread_worker(void) {
             _que.pop();
             _notified = true;
             _cond_var.notify_one();
-            // guard_uni_lock.unlock();
+            guard_uni_lock.unlock();
             main_uni_lock.unlock();
             /* Get current counters from maps */
             path_count = path_map[path];
